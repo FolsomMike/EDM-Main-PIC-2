@@ -6,9 +6,6 @@
 ; IMPORTANT: When programming the PIC in the notch cutter, turn the Electrode Current switch to
 ; Off and the Electrode Motion switch to Setup.
 ;
-; Normally, the programming header for the LCD PIC is not installed on the board.  It can be
-; installed in the Main PIC socket, programmed, and then moved to the LCD PIC socket.
-;
 ; Overview:
 ;
 ; This program controls an EDM cutting device by manipulating a motor which moves the head up and
