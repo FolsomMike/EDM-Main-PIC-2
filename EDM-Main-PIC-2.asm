@@ -238,7 +238,7 @@
 ; stimulus and performing various other actions which make the simulation run properly.
 ; Search for "DEBUG_MODE" to find all examples of such code.
 
-;#define DEBUG_MODE 1     ; set DEBUG_MODE testing "on" ;//debug mks -- comment this out later
+#define DEBUG_MODE 1     ; set DEBUG_MODE testing "on" ;//debug mks -- comment this out later
 
 ; Values for the digital pot settings.
 ;
@@ -904,6 +904,8 @@ start:
 
 menuLoop:
 
+    goto    jogMode ;debug mks
+    
     call    doExtModeMenu   ; display and handle the Standard / Extended Mode menu
     
     call    doMainMenu      ; display and handle the main menu
@@ -3446,7 +3448,7 @@ loopJM:
     call    bigDelayA
 
     btfsc   switchStates,JOG_UP_SW_FLAG
-    goto    chk_dwnJM       ; skip if Up switch not pressed
+    goto    chk_dwnJM                   ; skip if Up switch not pressed
 
 ; jog up button press    
 
@@ -3558,7 +3560,7 @@ noExtraDelayJM:
 
     banksel flags
 
-    goto    loopJM                  ; continue without updating display if print buffer not ready      
+    goto    loopJM                  ; continue without updating display if transmit buffer not ready
 
 displayJM:
 
@@ -3568,7 +3570,7 @@ displayJM:
     
     movlw   LINE4_COL12             ; set display position
     call    writeControl
-    call    displayPos      ; display the location of the head relative to the zero point
+    call    displayPos              ; display the location of the head relative to the zero point
     movlp   high startSerialPortTransmit
     call    startSerialPortTransmit ; force buffer to print, don't wait due to time criticality
     movlp   high displayJM                                   

@@ -1,0 +1,11 @@
+02_EDM-Main-PIC-2
+
+This file is for use on Model II setups which use the PIC16F648 on the Main Control board to drive the LCD.
+
+It uses bit-banging to write serial data to the LCD PIC.
+
+These three source files are used together for Model II configurations:
+
+02_EDM-Main-PIC-2
+02_EDM-LCD-PIC-2
+02_EDM-LED-PIC-2
