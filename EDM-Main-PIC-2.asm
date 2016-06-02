@@ -64,7 +64,7 @@
 ; 7.7e  Fixed incrementing/decrementing of multibyte variables -- decrementing was skipping a
 ;		count when crossing the zero thresold of an upper byte.
 ; 7.7f	Fixed comments explaining commands to the LCD screen. Cleaned up superfluous code.
-; 7.7g	Refactoring for clarity.
+; 7.7g	Added deglitch code for the Jog Up/Down switch inputs.
 ;
 ;
 ;--------------------------------------------------------------------------------------------------
@@ -305,9 +305,11 @@ STANDARD_RATIO0 EQU     0x06
 ; suggested setup is ??% blade erosion for wall reduction?
 ; was 0xdc for 1/4 motor step
 
-EXTENDED_RATIO1  EQU     0x0
-EXTENDED_RATIO0  EQU     0x37
+EXTENDED_RATIO1  EQU    0x0
+EXTENDED_RATIO0  EQU    0x37
 
+JOG_DEGLITCH_CNT EQU    .255  
+  
 ;--------------------------------------------------------------------------------------------------
 
 ;--------------------------------------------------------------------------------------------------
@@ -577,6 +579,9 @@ BLINK_ON_FLAG			EQU		0x01
     preScaler1              ; scales the change of position variable to match actual actual movement
     preScaler0
 
+    jogUpDeGlitchCntr       ; counter used to ignore noise spikes on switch lines
+    jogDwnDeGlitchCntr
+    
     debounce1               ; switch debounce timer decremented by the interrupt routine
     debounce0
 
@@ -891,6 +896,10 @@ setup:
     banksel flags
 
     call    reallyBigDelay
+    
+    movlw   JOG_DEGLITCH_CNT
+    movwf   jogUpDeGlitchCntr
+    movwf   jogDwnDeGlitchCntr
     
     movlw   position3
     call    zeroQuad        ; clear the position variable
@@ -2055,7 +2064,7 @@ zeroQuad:
 ;
 ; Menu display:
 ;
-; "OPT AutoNotcher Rx.x" 
+; "OPT AutoNotcher x.xx" 
 ;
 ; 0x1, 0xC0
 ; "CHOOSE CONFIGURATION"
@@ -2631,13 +2640,11 @@ cutLoop:
     goto    checkHiLimit    ; debounce timer not zeroed, don't check buttons
 
 checkUPDWNButtons:
-
-    btfss   JOG_UP_SW_P,JOG_UP_SW
+    
     call    adjustSpeedOrPowerUp   ; increment the speed (sparkLevel) value or Power Level
-
-    btfss   JOG_DWN_SW_P,JOG_DWN_SW
+    
     call    adjustSpeedOrPowerDown ; decrement the speed (sparkLevel) value or Power Level
-
+    
 checkHiLimit:
 
     call    sparkTimer
@@ -3170,15 +3177,33 @@ noRetractOCT:
 ;--------------------------------------------------------------------------------------------------
 ; adjustSpeedOrPowerUp
 ;
+; Checks to see if Jog Up switch active. If so: 
+;    
 ; If Mode switch is in "Setup" position, jumps to adjustSpeedUp.
 ; If switch is in "Normal" position, jumps to adjustPowerUp.
+;
+; A deglitch algorithm is used for units with cable extensions on the Jog switch. These are
+; subject to noise pulses picked up from the cutting current cable. The switch must be in the
+; active position for a specified number of counts before it is acknowledged.
 ;
 
 adjustSpeedOrPowerUp:
 
-    btfss   MODE_SW_P,MODE_SW   ; in Setup mode?
-    goto    adjustSpeedUp       ; adjust Speed setting if in "Setup" mode
-    goto    adjustPowerUp       ; adjust Power Level if in "Normal" mode
+    btfss   JOG_UP_SW_P,JOG_UP_SW
+    goto    aSOPU1
+    
+    movlw   JOG_DEGLITCH_CNT
+    movwf   jogUpDeGlitchCntr
+    return
+    
+aSOPU1:
+    
+    decfsz  jogUpDeGlitchCntr,F     ; ignore until counter reaches zero
+    return
+    
+    btfss   MODE_SW_P,MODE_SW       ; in Setup mode?
+    goto    adjustSpeedUp           ; adjust Speed setting if in "Setup" mode
+    goto    adjustPowerUp           ; adjust Power Level if in "Normal" mode
 
 ; end of adjustSpeedOrPowerUp
 ;--------------------------------------------------------------------------------------------------
@@ -3186,15 +3211,33 @@ adjustSpeedOrPowerUp:
 ;--------------------------------------------------------------------------------------------------
 ; adjustSpeedOrPowerDown
 ;
+; Checks to see if Jog Down switch active. If so: 
+;
 ; If Mode switch is in "Setup" position, jumps to adjustSpeedDown.
 ; If switch is in "Normal" position, jumps to adjustPowerDown.
+;
+; A deglitch algorithm is used for units with cable extensions on the Jog switch. These are
+; subject to noise pulses picked up from the cutting current cable. The switch must be in the
+; active position for a specified number of counts before it is acknowledged.
 ;
 
 adjustSpeedOrPowerDown:
 
-    btfss   MODE_SW_P,MODE_SW   ; in Setup mode?
-    goto    adjustSpeedDown     ; adjust Speed setting if in "Setup" mode
-    goto    adjustPowerDown     ; adjust Power Level if in "Normal" mode
+    btfss   JOG_DWN_SW_P,JOG_DWN_SW
+    goto    aSOPD1
+    
+    movlw   JOG_DEGLITCH_CNT        ; switch inactive so reset deglitch counter
+    movwf   jogDwnDeGlitchCntr
+    return
+    
+aSOPD1:
+        
+    decfsz  jogDwnDeGlitchCntr,F    ; ignore until counter reaches zero
+    return
+    
+    btfss   MODE_SW_P,MODE_SW       ; in Setup mode?
+    goto    adjustSpeedDown         ; adjust Speed setting if in "Setup" mode
+    goto    adjustPowerDown         ; adjust Power Level if in "Normal" mode
 
 ; end of adjustSpeedOrPowerDown
 ;--------------------------------------------------------------------------------------------------
@@ -5860,7 +5903,7 @@ getStringChar:
     incf    scratch0,F      ; increment to index properly
     movwf   scratch2        ; store character selector
 
-string0:    ; "OPT AutoNotcher Rx.x"
+string0:    ; "OPT AutoNotcher x.xx" ~ this is the name and version string
 
     decfsz  scratch0,F      ; count down until desired string reached
     goto    string1         ; skip to next string if count not 0
@@ -5892,7 +5935,7 @@ string0:    ; "OPT AutoNotcher Rx.x"
     retlw   '7'
     retlw   '.'
     retlw   '7'
-    retlw   'f'
+    retlw   'g'
 
 string1:    ; "CHOOSE CONFIGURATION"
 
