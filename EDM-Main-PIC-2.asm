@@ -833,6 +833,8 @@ start:
 
     call    setup           ; preset variables and configure hardware
 
+;    goto    cutNotch    ;debug mks -- remove this   
+    
 menuLoop:
 
     call    doExtModeMenu   ; display and handle the Standard / Extended Mode menu
@@ -2638,8 +2640,6 @@ cutLoop:
     iorwf   debounce1,W
     btfss   STATUS,Z
     goto    checkHiLimit    ; debounce timer not zeroed, don't check buttons
-
-checkUPDWNButtons:
     
     call    adjustSpeedOrPowerUp   ; increment the speed (sparkLevel) value or Power Level
     
@@ -3192,7 +3192,7 @@ adjustSpeedOrPowerUp:
     btfss   JOG_UP_SW_P,JOG_UP_SW
     goto    aSOPU1
     
-    movlw   JOG_DEGLITCH_CNT
+    movlw   JOG_DEGLITCH_CNT        ; switch inactive so reset deglitch counter
     movwf   jogUpDeGlitchCntr
     return
     
@@ -3200,7 +3200,10 @@ aSOPU1:
     
     decfsz  jogUpDeGlitchCntr,F     ; ignore until counter reaches zero
     return
-    
+
+    movlw   JOG_DEGLITCH_CNT        ; reset deglitch counter
+    movwf   jogUpDeGlitchCntr
+        
     btfss   MODE_SW_P,MODE_SW       ; in Setup mode?
     goto    adjustSpeedUp           ; adjust Speed setting if in "Setup" mode
     goto    adjustPowerUp           ; adjust Power Level if in "Normal" mode
@@ -3234,7 +3237,10 @@ aSOPD1:
         
     decfsz  jogDwnDeGlitchCntr,F    ; ignore until counter reaches zero
     return
-    
+
+    movlw   JOG_DEGLITCH_CNT        ; reset deglitch counter
+    movwf   jogDwnDeGlitchCntr
+        
     btfss   MODE_SW_P,MODE_SW       ; in Setup mode?
     goto    adjustSpeedDown         ; adjust Speed setting if in "Setup" mode
     goto    adjustPowerDown         ; adjust Power Level if in "Normal" mode
@@ -4504,6 +4510,10 @@ smallDelay:
 smallDelayA:
     movwf   scratch2        ; store W
 
+    ifdef debug       ; if debugging, don't wait for interrupt to be set high as the MSSP is not
+    return            ; simulated by the IDE
+    endif
+    
 LoopSD1:
 
     clrwdt                  ; keep watch dog timer from triggering
@@ -5812,6 +5822,10 @@ notLower:
 
 reallyBigDelay:
 
+    ifdef debug       ; if debugging, don't wait for interrupt to be set high as the MSSP is not
+    return            ; simulated by the IDE
+    endif
+    
     banksel scratch6
 
     movlw   .50
