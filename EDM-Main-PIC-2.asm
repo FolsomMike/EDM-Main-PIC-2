@@ -3189,20 +3189,19 @@ noRetractOCT:
 
 adjustSpeedOrPowerUp:
 
-    btfss   JOG_UP_SW_P,JOG_UP_SW
-    goto    aSOPU1
-    
-    movlw   JOG_DEGLITCH_CNT        ; switch inactive so reset deglitch counter
-    movwf   jogUpDeGlitchCntr
+    btfsc   JOG_UP_SW_P,JOG_UP_SW   ; do nothing if switch not active
     return
+        
+    movlw   JOG_DEGLITCH_CNT        ; load deglitch counter
+    movwf   jogUpDeGlitchCntr    
     
-aSOPU1:
+aSOPU1:    ; loop until counter is zero or switch inactive detected
     
-    decfsz  jogUpDeGlitchCntr,F     ; ignore until counter reaches zero
+    btfsc   JOG_UP_SW_P,JOG_UP_SW
     return
 
-    movlw   JOG_DEGLITCH_CNT        ; reset deglitch counter
-    movwf   jogUpDeGlitchCntr
+    decfsz  jogUpDeGlitchCntr,F
+    goto    aSOPU1
         
     btfss   MODE_SW_P,MODE_SW       ; in Setup mode?
     goto    adjustSpeedUp           ; adjust Speed setting if in "Setup" mode
@@ -3226,20 +3225,19 @@ aSOPU1:
 
 adjustSpeedOrPowerDown:
 
-    btfss   JOG_DWN_SW_P,JOG_DWN_SW
-    goto    aSOPD1
-    
-    movlw   JOG_DEGLITCH_CNT        ; switch inactive so reset deglitch counter
-    movwf   jogDwnDeGlitchCntr
+    btfsc   JOG_DWN_SW_P,JOG_DWN_SW   ; do nothing if switch not active
     return
-    
-aSOPD1:
         
-    decfsz  jogDwnDeGlitchCntr,F    ; ignore until counter reaches zero
+    movlw   JOG_DEGLITCH_CNT        ; load deglitch counter
+    movwf   jogDwnDeGlitchCntr    
+    
+aSOPD1:    ; loop until counter is zero or switch inactive detected
+    
+    btfsc   JOG_DWN_SW_P,JOG_DWN_SW
     return
 
-    movlw   JOG_DEGLITCH_CNT        ; reset deglitch counter
-    movwf   jogDwnDeGlitchCntr
+    decfsz  jogDwnDeGlitchCntr,F
+    goto    aSOPD1
         
     btfss   MODE_SW_P,MODE_SW       ; in Setup mode?
     goto    adjustSpeedDown         ; adjust Speed setting if in "Setup" mode
